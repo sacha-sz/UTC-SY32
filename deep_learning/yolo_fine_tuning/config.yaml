@@ -1,0 +1,7 @@
+path : C:\Users\marti\OneDrive\Documents\GI04\SY32\Projet\UTC-SY32\apprentissage_profond_yolo\data
+train: train/images
+val: val/images
+nc: 8
+names: ['frouge','forange','fvert','stop','ceder','interdiction','danger','obligation']
+
+
