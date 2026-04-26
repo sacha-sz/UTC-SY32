@@ -1,80 +1,151 @@
-# SY32_TD2_Groupe_D
-Projet de vision par ordinateur
+# SY32 - Détection de Panneaux de Signalisation
 
-## Installation de l'environnement
+Ce dépôt regroupe l'ensemble des travaux réalisés dans le cadre de l'UV **SY32** à l'UTC, dédiée à la **vision par ordinateur**.
 
-Pour installer l'environnement conda nécessaire pour exécuter les codes de ce projet, veuillez suivre les étapes suivantes :
+Le projet porte sur la **détection et la classification de panneaux de signalisation routière** à partir d'un dataset annoté d'images. Deux grandes approches ont été explorées : le machine learning classique et le deep learning.
 
-1. Téléchargez et installez [Anaconda](https://www.anaconda.com/products/individual) ou [Miniconda](https://docs.conda.io/en/latest/miniconda.html) si ce n'est pas déjà fait.
-2. Créez un nouvel environnement conda en utilisant le fichier `environment.yml` fourni dans ce dépôt :
-```bash
-conda env create -f environment.yml
-```
-1. Activez l'environnement nouvellement créé :
-```bash
-conda activate utc-sy32
-```
-1. (Facultatif) Si vous souhaitez utiliser un noyau Jupyter spécifique à cet environnement, installez ipykernel :
-```bash
-conda install -c anaconda ipykernel
-```
-Puis enregistrez le noyau :
-```bash
-python -m ipykernel install --user --name=utc-sy32
-```
+<br/>
 
-Vous êtes maintenant prêt à exécuter les codes de ce projet dans l'environnement `utc-sy32`.
+## Vue d'ensemble
 
+| Approche | Méthode | Dossier |
+|----------|---------|---------|
+| Machine Learning | Descripteurs HOG + couleur, fenêtre glissante | [`machine_learning/`](machine_learning/) |
+| Deep Learning | U-Net (segmentation) + classifieur CNN | [`deep_learning/final_implementation/`](deep_learning/final_implementation/) |
+| Deep Learning | Fine-tuning YOLOv8 | [`deep_learning/yolo_fine_tuning/`](deep_learning/yolo_fine_tuning/) |
+
+<br/>
+
+## Dataset
+
+Le dataset est organisé en trois partitions : entraînement, validation et test. Les annotations sont fournies au format CSV (coordonnées des boîtes englobantes).
+
+| Partition | Dossier |
+|-----------|---------|
+| Entraînement | [`dataset/train/`](dataset/train/) |
+| Validation | [`dataset/val/`](dataset/val/) |
+| Test | [`dataset/test/`](dataset/test/) |
+
+**Classes détectées :**
+
+| Classe | Description |
+|--------|-------------|
+| `frouge` | Feu rouge |
+| `forange` | Feu orange |
+| `fvert` | Feu vert |
+| `stop` | Panneau stop |
+| `ceder` | Cédez le passage |
+| `interdiction` | Panneau d'interdiction |
+| `danger` | Panneau de danger |
+| `obligation` | Panneau d'obligation |
+
+<br/>
 
 ## Machine Learning
 
-Pour pouvoir prédire sur de nouvelles données et que vous n'avez pas encore le modèle enregistrer veuillez suivre ces étapes :
-1. Lancer le script `transform_dataset.py`présent dans le dossier utils afin d'obtenir le dossier `full_datset` contenant toutes les classes de panneaux
-2. Executer l'entiereté des fichiers .ipynb du dossier `machine_learning`
-3. Eventuellement changer le nom et le chemin du dossier à prédire
+Deux notebooks explorent des approches classiques de détection :
 
-Sinon vous pouvez n'executer que le début permettant de récupérer les variables et les fonctions utiles puis lancer la prédiction
+| Notebook | Méthode |
+|----------|---------|
+| [`ml_color_hog.ipynb`](machine_learning/ml_color_hog.ipynb) | Descripteurs couleur et HOG pour la classification |
+| [`ml_sliding_window.ipynb`](machine_learning/ml_sliding_window.ipynb) | Détection par fenêtre glissante |
 
+**Pour lancer la prédiction sur de nouvelles données :**
+
+1. Exécuter [`utils/transform_dataset.py`](utils/transform_dataset.py) pour générer le dossier `full_dataset` contenant toutes les classes.
+2. Exécuter les notebooks du dossier `machine_learning/` dans l'ordre.
+3. Adapter si besoin le chemin du dossier à prédire en fin de notebook.
+
+<br/>
 
 ## Deep Learning
 
-### Final implementation
+### Implémentation finale
 
-Contient les codes de l'implémentation finale de notre modèle de détection en deep learning.
+Contient les codes de l'implémentation finale du pipeline de détection en deep learning : segmentation par U-Net suivie d'une classification CNN.
 
-Pour lancer la détection sur les images de test. Faire cette commande depuis le repertoire racine du projet : 
+**Détection sur les images de test** (depuis la racine du projet) :
+
+```bash
+python ./deep_learning/final_implementation/run_on_test.py
 ```
-python ./deep_learning/final_implemenation/run_on_test.py
+
+**Réentrainement :**
+
+```bash
+# Entrainement du modèle de segmentation U-Net
+python ./deep_learning/final_implementation/train_segmentation_model.py
+
+# Entrainement du classifieur
+python ./deep_learning/final_implementation/train_classification_model.py
 ```
 
-  
-**Réentrainement :**   
-Pour lancer l'entrainement de U-net
+Les poids des réseaux sont sauvegardés dans [`checkpoints/`](deep_learning/final_implementation/checkpoints/).
+La définition des architectures est dans [`models/`](deep_learning/final_implementation/models/).
+
+| Fichier | Rôle |
+|---------|------|
+| [`config.py`](deep_learning/final_implementation/config.py) | Paramètres globaux (tailles, classes, batch size) |
+| [`load_data.py`](deep_learning/final_implementation/load_data.py) | Chargement et préparation des données |
+| [`detection_tools.py`](deep_learning/final_implementation/detection_tools.py) | Outils de post-traitement et d'affichage |
+| [`train_segmentation_model.py`](deep_learning/final_implementation/train_segmentation_model.py) | Entrainement U-Net |
+| [`train_classification_model.py`](deep_learning/final_implementation/train_classification_model.py) | Entrainement du classifieur |
+| [`run_on_test.py`](deep_learning/final_implementation/run_on_test.py) | Inférence sur les images de test |
+
+---
+
+### Fine-tuning YOLOv8
+
+Tentative d'adaptation de YOLOv8 au dataset du projet.
+
+**Utilisation :**
+
+1. Convertir le dataset au format YOLO via [`creation_dataset.ipynb`](deep_learning/yolo_fine_tuning/creation_dataset.ipynb).
+2. Lancer l'entrainement avec [`train_yolo.py`](deep_learning/yolo_fine_tuning/train_yolo.py).
+3. Visualiser une détection sur une image dans [`run.ipynb`](deep_learning/yolo_fine_tuning/run.ipynb).
+
+> Note : l'entrainement complet de YOLO nécessite une puissance de calcul importante (Kaggle recommandé).
+
+<br/>
+
+## Installation
+
+```bash
+# Cloner le dépôt
+git clone https://github.com/sacha-sz/UTC-SY32.git
+cd UTC-SY32
+
+# Créer et activer l'environnement conda
+conda env create -f environment.yml
+conda activate utc-sy32
+
+# (Facultatif) Enregistrer un noyau Jupyter dédié
+conda install -c anaconda ipykernel
+python -m ipykernel install --user --name=utc-sy32
 ```
-python ./deep_learning/final_implemenation/train_segmentation_model.py
-```
-Pour lancer l'entrainement du classifieur
-```
-python ./deep_learning/final_implemenation/train_classification_model.py
-```
-  
-Les poids de ces réseaux vont s'enregistrer dans le repertoire checkpoints  
-La définition des modèles est dans le repertoire models
 
-### YOLO implementation
-Code de la tentative d'implémentation de YOLO (demande puissance de calcul trop importante -> Kaggle)
+<br/>
 
-### YOLO fine tuning
-Code du fine tuning
+## Technologies utilisées
 
-Dans le fichier run.ipynb, saisir le chemin d'une image et visualiser la détection réalisé de YOLO sur celle ci.
+- **Python 3** - langage principal
+- **PyTorch** - entrainement des modèles deep learning (U-Net, classifieur)
+- **Ultralytics YOLOv8** - détection par fine-tuning
+- **Scikit-learn** - pipelines machine learning
+- **OpenCV** - traitement d'images, fenêtre glissante, HOG
+- **Pandas / NumPy** - manipulation des données et annotations
+- **Matplotlib** - visualisations
+- **Jupyter Notebook** - environnement d'analyse et d'expérimentation
 
-**Réentrainement :**  
-Transformer le dataset au format accepté par YOLO via le notebook creation_dataset.ipynb  
-Réentrainer le modele sur ce dataset avec train_yolo.ipynb  
+<br/>
 
+## Licence
 
+Ce projet est distribué sous licence **MIT** - voir le fichier [LICENSE](LICENSE) pour plus d'informations.
+
+<br/>
 
 ## Auteurs
-- [Martin C.](github.com/martincrz)
-- [Sacha S.](github.com/sacha-sz)
+
+- **[@martincrz](https://github.com/martincrz)**
+- **[@sacha-sz](https://github.com/sacha-sz)**
